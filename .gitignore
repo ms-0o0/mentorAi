@@ -1,0 +1,43 @@
+# 🔐 환경 변수 (절대 업로드 금지)
+.env
+
+# 🐍 Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 🧪 가상환경 (venv)
+venv/
+.env/
+.venv/
+
+# 📦 패키지 빌드
+build/
+dist/
+*.egg-info/
+
+# 🧾 로그
+*.log
+
+# 💾 OS 파일
+.DS_Store
+Thumbs.db
+
+# 🧠 FAISS 벡터 DB (용량 큼 + 재생성 가능)
+*.faiss
+*.pkl
+
+# 📂 업로드 파일 저장 폴더
+temp/
+
+# 📝 Jupyter Notebook
+.ipynb_checkpoints/
+
+# 🧰 VSCode
+.vscode/
+
+# 🧪 테스트 캐시
+.pytest_cache/
+
+# 🔥 기타
+*.sqlite3
