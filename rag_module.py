@@ -17,8 +17,8 @@ MODE_QA = "질문"
 MODE_QUIZ = "문제 생성"
 MODE_SUMMARY = "요약"
 
-# .env 파일에 저장된 API 키 로드
-load_dotenv()
+# # .env 파일에 저장된 API 키 로드
+# load_dotenv()
 
 def clean_text(text):
     # 이상한 문자 제거
@@ -387,7 +387,8 @@ def create_rag_chain(pdf_path, role="student"):
 
     # 5. LLM
     try:
-        llm = ChatOllama(model="qwen2.5", temperature=0.1)
+        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        llm = ChatOllama(model="qwen2.5", temperature=0.1, base_url=ollama_base_url)
     except:
         raise Exception("Ollama 서버가 실행 중인지 확인하세요.")
 
