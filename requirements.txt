@@ -8,6 +8,3 @@ langchain-text-splitters
 langchain-huggingface
 sentence-transformers  # jhgan/ko-sroberta-multitask 모델 로컬 임베딩 시 필요 (torch 자동 설치됨)
 
-# torch / torchvision 명시적 설치 (CPU 전용)
-torch==2.3.0
-torchvision==0.18.0

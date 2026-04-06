@@ -12,17 +12,18 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# pip 최신화 및 필수 Python 패키지 설치
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# pip 최신화
+RUN pip install --no-cache-dir --upgrade pip
 
 # torch / torchvision CPU 버전 명시적 설치 (HuggingFace 호환)
 RUN pip install --no-cache-dir \
-    torch==2.3.0 \
-    torchvision==0.18.0 \
+    torch \
+    torchvision \
     --index-url https://download.pytorch.org/whl/cpu
+
+# requirements.txt 복사 및 패키지 설치
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # 소스 코드 전체 복사
 COPY . .
