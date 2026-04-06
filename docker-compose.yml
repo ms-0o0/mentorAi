@@ -2,7 +2,10 @@ version: "3.9"
 
 networks:
   app_net:
-    driver: bridge   # 두 컨테이너가 같은 네트워크에 있게 함
+    driver: bridge
+
+volumes:
+  ollama_data:
 
 services:
   ollama:
@@ -13,6 +16,8 @@ services:
     restart: unless-stopped
     networks:
       - app_net
+    volumes:
+      - ollama_data:/root/.ollama   # 다운로드 받은 LLM 모델이 증발하지 않도록 저장소 마운트
 
   rag-mentor:
     build: .
@@ -20,7 +25,7 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434   # Ollama 컨테이너 이름으로 접근
+      - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
       - ollama
     networks:
