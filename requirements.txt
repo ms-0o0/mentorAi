@@ -2,6 +2,7 @@ python-dotenv
 faiss-cpu
 pymupdf
 langchain-community
-langchain-openai
 langchain-core
 streamlit
+langchain-huggingface
+sentence-transformers  # jhgan/ko-sroberta-multitask 모델 로컬 임베딩 시 필요
