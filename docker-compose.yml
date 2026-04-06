@@ -1,12 +1,18 @@
 version: "3.9"
 
+networks:
+  app_net:
+    driver: bridge   # 두 컨테이너가 같은 네트워크에 있게 함
+
 services:
   ollama:
-    image: ollama/ollama:latest   # Ollama 공식 이미지라고 가정
+    image: ollama/ollama:latest
     container_name: ollama
     ports:
-      - "11434:11434"             # Ollama 기본 포트
+      - "11434:11434"
     restart: unless-stopped
+    networks:
+      - app_net
 
   rag-mentor:
     build: .
@@ -14,8 +20,10 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://ollama:11434   # Ollama 컨테이너 이름으로 접근
     depends_on:
       - ollama
+    networks:
+      - app_net
     volumes:
-      - ./temp:/app/temp          # FAISS 캐시 공유
+      - ./temp:/app/temp

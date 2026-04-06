@@ -388,9 +388,11 @@ def create_rag_chain(pdf_path, role="student"):
     # 5. LLM
     try:
         ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-        llm = ChatOllama(model="qwen2.5", temperature=0.1, base_url=ollama_base_url)
-        # ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        # llm = ChatOllama(model="qwen2.5", temperature=0.1, base_url=ollama_base_url)
+        llm = ChatOllama(
+            model="qwen2.5",
+            temperature=0.1,
+            base_url=ollama_base_url
+        )
     except:
         raise Exception("Ollama 서버가 실행 중인지 확인하세요.")
 
