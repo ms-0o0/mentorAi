@@ -1,31 +1,40 @@
-# 파이썬 3.10 슬림 이미지 사용
-FROM python:3.10-slim
+# 1단계: 빌더(Builder) 스테이지
+FROM python:3.10-slim AS builder
 
-# 작업 디렉토리 설정
 WORKDIR /app
 
-# 시스템 의존성 설치 (필수 라이브러리 + wget/curl)
+# 빌드에 필요한 시스템 의존성 설치
 RUN apt-get update && apt-get install -y \
     build-essential \
-    git \
-    curl \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# pip 최신화
+# 파이썬 의존성 설치 준비
 RUN pip install --no-cache-dir --upgrade pip
-
-# torch / torchvision CPU 버전 명시적 설치 (HuggingFace 호환)
-RUN pip install --no-cache-dir \
-    torch \
-    torchvision \
-    --index-url https://download.pytorch.org/whl/cpu
-
-# requirements.txt 복사 및 패키지 설치
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# 소스 코드 전체 복사
+# 종속성 설치 (의존성 파일들만 미리 생성)
+# Pytorch는 용량이 크므로 명시적으로 CPU 버전 설치
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# 2단계: 런타임(Runtime) 스테이지
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# 런타임에 필요한 최소한의 시스템 패키지만 설치 (curl은 헬스체크용)
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 빌더 스테이지에서 빌드된 파이썬 패키지(Wheel) 복사 및 설치
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements.txt .
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
+    torch torchvision \
+    && rm -rf /wheels
+
+# 소스 코드 복사
 COPY . .
 
 # Streamlit 포트 노출

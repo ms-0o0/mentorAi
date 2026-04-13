@@ -357,8 +357,8 @@ def create_rag_chain(pdf_path, role="student"):
 
     # 2. 문서 분할
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=700,
-        chunk_overlap=200,
+        chunk_size=400,
+        chunk_overlap=100,
         separators=["\n\n", "\n", ".", " "]
     )
     split_docs = text_splitter.split_documents(docs)
@@ -381,20 +381,21 @@ def create_rag_chain(pdf_path, role="student"):
 
     # 4. retriever
     retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 10}
+        search_type="similarity",
+        search_kwargs={"k": 3}
     )
 
     # 5. LLM
     try:
         ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
         llm = ChatOllama(
-            model="qwen2.5",
+            model="qwen2.5:1.5b",
             temperature=0.1,
-            base_url=ollama_base_url
+            base_url=ollama_base_url,
+            timeout=180
         )
-    except:
-        raise Exception("Ollama 서버가 실행 중인지 확인하세요.")
+    except Exception as e:
+        raise Exception(f"Ollama 서버 응답 없음: {str(e)}\n\n*해결 가이드*\n1. Docker 컨테이너가 정상 구동 중인지 확인하세요.\n2. 초기 구동 시 모델 다운로드에 시간이 걸릴 수 있습니다.")
 
     # 6. Router
     router_chain = create_router_chain(retriever, llm, role, docs)

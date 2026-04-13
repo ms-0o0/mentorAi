@@ -17,7 +17,35 @@ services:
     networks:
       - app_net
     volumes:
-      - ollama_data:/root/.ollama   # 다운로드 받은 LLM 모델이 증발하지 않도록 저장소 마운트
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "4G"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  init-ollama:
+    image: curlimages/curl:latest
+    container_name: init-ollama
+    networks:
+      - app_net
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command: >
+      sh -c "echo 'Downloading Qwen 2.5 1.5B model...' &&
+             curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen2.5:1.5b\"}' &&
+             echo 'Model downloaded successfully.'"
 
   rag-mentor:
     build: .
@@ -27,8 +55,26 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
+      init-ollama:
+        condition: service_completed_successfully
     networks:
       - app_net
     volumes:
       - ./temp:/app/temp
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
