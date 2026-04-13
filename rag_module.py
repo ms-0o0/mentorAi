@@ -29,19 +29,23 @@ def clean_text(text):
 def format_docs(docs):
     context = ""
     sources = []
+    seen = set()
 
     for d in docs:
         cleaned = clean_text(d.page_content)
 
-        # 🔥 context에는 정제된 텍스트
+        # 🔥 중복 제거 핵심
+        key = cleaned[:150]
+        if key in seen:
+            continue
+        seen.add(key)
+
         context += cleaned + "\n\n"
 
-        # 🔥 출처는 그대로 유지
         page = d.metadata.get("page", "unknown")
         sources.append(f"{page}페이지")
 
     return context, sorted(set(sources), key=lambda x: int(x.replace("페이지", "")) if x != "unknown" else 999)
-
 
 def create_rag_chain_internal(retriever, llm, role="student"):
     
@@ -54,6 +58,9 @@ def create_rag_chain_internal(retriever, llm, role="student"):
         2. 쉬운 비유와 친절한 말투(~해요, ~습니다)를 사용한다.
         3. 단계적으로 차근차근 설명한다.
         4. 반드시 한국어로만 답변한다.
+        5. 같은 문장 반복 금지
+        6. 동일한 내용 여러 번 설명 금지
+        7. 중복 내용은 제거하고 요약할 것
 
         # 답변 형식
         ✨ [핵심 요약]
@@ -83,6 +90,9 @@ def create_rag_chain_internal(retriever, llm, role="student"):
         2. 깊이 있는 전문 용어를 활용하고, 학술적인 문체(~이다, ~함)를 사용한다.
         3. 논리적으로 구조화된 답변을 제공한다.
         4. 반드시 한국어로만 답변한다.
+        5. 같은 문장 반복 금지
+        6. 동일한 내용 여러 번 설명 금지
+        7. 중복 내용은 제거하고 요약할 것
 
         # 답변 형식
         📌 [논점 핵심 요약]
@@ -181,9 +191,18 @@ def create_rag_chain_internal(retriever, llm, role="student"):
 
 def route(question, mode, retriever, rag_chain_with_context, quiz_chain, summary_chain):
     if mode == MODE_QUIZ:
-        docs = retriever.invoke("핵심 개념")
+         # 1. 문서 가져오기
+        docs = retriever.invoke("핵심 개념 요약")
         context, _ = format_docs(docs)
-        return quiz_chain.invoke({"context": context})
+
+        # 2. 먼저 요약 (🔥 핵심)
+        summary = summary_chain.invoke({"context": context})
+
+        # 3. 요약 기반으로 문제 생성
+        return quiz_chain.invoke({
+            "context": summary,
+            "question": question
+        })
 
     elif mode == MODE_SUMMARY:
         docs = retriever.invoke("전체 요약")
@@ -207,10 +226,14 @@ def create_quiz_chain(llm, role="student"):
 
         # 제약조건
         1. 반드시 문서(context) 내용만 기반으로 문제를 만든다.
-        2. 단순 개념 암기보다는 응용 및 깊은 이해를 묻는 문제를 포함한다.
-        3. 객관식은 보기 4개, 매력적인 오답을 포함하여 출제한다.
-        4. 중간/기말고사에 활용 가능하도록 문제, 정답, 그리고 채점 기준(상세 해설)을 명확히 제시한다.
-        5. 반드시 한국어로만 답변한다.
+        2. 문제의 개수는 반드시 최대 3개까지 낸다.
+        3. 단순 개념 암기보다는 응용 및 깊은 이해를 묻는 문제를 포함한다.
+        4. 객관식은 보기 4개, 매력적인 오답을 포함하여 출제한다.
+        5. 중간/기말고사에 활용 가능하도록 문제, 정답, 그리고 채점 기준(상세 해설)을 명확히 제시한다.
+        6. 반드시 한국어로만 답변한다.
+        7. 같은 문장 반복 금지
+        7. 동일한 내용 여러 번 설명 금지
+        8. 중복 내용은 제거하고 요약할 것
 
         # 출력형식
         ## 📝 객관식 문제
@@ -233,40 +256,55 @@ def create_quiz_chain(llm, role="student"):
         {context}
         """
     else:
-        template = """
-        # 역할
-        너는 학생의 학습과 복습을 돕는 친절한 AI 튜터다.
 
-        # 명령문
-        학습자가 주어진 문서의 내용을 잘 이해했는지 스스로 점검할 수 있도록, 기초 핵심 개념 위주의 퀴즈를 생성해라.
+          template = """
+            # 역할
+            너는 수학 문제를 정확하게 출제하는 교사다.
 
-        # 제약조건
-        1. 반드시 문서(context) 내용만 기반으로 문제를 만든다.
-        2. 너무 꼬아 내지 않고, 핵심 내용을 복습하기 좋은 난이도로 설정한다.
-        3. 객관식은 보기 4개를 포함한다.
-        4. 학습자가 즉시 답을 맞추고 이해할 수 있도록 친절한 해설을 포함한다.
-        5. 반드시 한국어로만 답변한다.
+            # 사용자 요구
+            {question}
 
-        # 출력형식
-        ## 📌 객관식 퀴즈
-        ### 1. [문제]
-        a) [보기]
-        b) [보기]
-        c) [보기]
-        d) [보기]
-        **정답:** a
-        **친절한 해설:** [해설]
+            # 절대 규칙 (어기면 실패)
+            1. 문제는 정확히 2개만 생성한다
+            2. 반드시 "사용자가 요구한 연산"만 사용한다
+            3. 문제는 반드시 "풀어야 하는 질문 형태"로 작성한다
+            (❌ 식만 던지기 금지)
+            (⭕ ~을 계산하시오 / 전개하시오)
+            4. 객관식은 "문제 1개 + 보기 4개 + 정답 1개" 구조만 허용
+            5. 보기에는 정답이 아닌 오답 3개 포함
+            6. 단답형도 반드시 계산 문제로 만든다
+            7. 추가 문제 생성 금지
+            8. 출력 형식 외 텍스트 절대 금지
 
-        ---
+            # 문제 생성 규칙
+            - 1번: 객관식 (전개 or 계산 문제)
+            - 2번: 단답형 (전개 or 계산 문제)
 
-        ## 💡 단답형 퀴즈
-        ### 2. [문제]
-        **정답:** [답]
-        **친절한 해설:** [해설]
+            # 출력 형식 (절대 수정 금지)
+            ## 📌 객관식 퀴즈
+            ### 1. 문제
+            (다항식 곱셈 문제를 한 줄로 제시)
 
-        # 문서
-        {context}
-        """
+            a) (정답 포함 4지선다)
+            b) 
+            c) 
+            d) 
+
+            정답: (a/b/c/d 중 하나)
+            해설: (간단한 계산 과정)
+
+            ---
+
+            ## 💡 단답형 퀴즈
+            ### 2. 문제
+            (다항식 곱셈 문제)
+
+            정답: (계산 결과)
+            해설: (계산 과정)
+
+            # 문서
+            {context}
+            """
 
     prompt = ChatPromptTemplate.from_template(template)
 
@@ -286,6 +324,9 @@ def create_summary_chain(llm, role="student"):
         2. 학술적인 문체(~이다, ~함)를 사용한다.
         3. 강의 자료 목차나 연구 요약본으로 바로 쓸 수 있도록 체계적으로 구조화한다.
         4. 반드시 한국어로만 답변한다.
+        5. 같은 문장 반복 금지
+        6. 동일한 내용 여러 번 설명 금지
+        7. 중복 내용은 제거하고 요약할 것   
 
         # 출력형식
         📚 **[논점 요약]**
@@ -313,6 +354,9 @@ def create_summary_chain(llm, role="student"):
         2. 중학생~고등학생도 이해할 수 있을 만큼 쉽고 친근한 말투(~해요, ~습니다)를 사용한다.
         3. 비유나 예시를 들 수 있으면 활용하여 이해를 일상적으로 돕는다.
         4. 반드시 한국어로만 답변한다.
+        5. 같은 문장 반복 금지
+        6. 동일한 내용 여러 번 설명 금지
+        7. 중복 내용은 제거하고 요약할 것
 
         # 출력형식
         ✨ **[한 줄 핵심 파악]**
@@ -380,16 +424,22 @@ def create_rag_chain(pdf_path, role="student"):
         vectorstore.save_local(db_path)
 
     # 4. retriever
+    # retriever = vectorstore.as_retriever(
+    #     search_type="similarity",
+    #     search_kwargs={"k": 3}
+    # )
+
     retriever = vectorstore.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": 3}
+        search_type="mmr",
+        search_kwargs={"k": 3, "fetch_k": 10}
     )
 
     # 5. LLM
     try:
-        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+        # ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+        ollama_base_url = "http://localhost:11434"
         llm = ChatOllama(
-            model="qwen2.5:1.5b",
+            model="qwen2.5:7b",
             temperature=0.1,
             base_url=ollama_base_url,
             timeout=180

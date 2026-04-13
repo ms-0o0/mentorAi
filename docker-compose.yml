@@ -21,8 +21,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2.0"
-          memory: "4G"
+          cpus: "6.0"
+          memory: "12G"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
@@ -43,9 +43,9 @@ services:
       ollama:
         condition: service_healthy
     command: >
-      sh -c "echo 'Downloading Qwen 2.5 1.5B model...' &&
-             curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen2.5:1.5b\"}' &&
-             echo 'Model downloaded successfully.'"
+        sh -c "echo 'Downloading Qwen 2.5 7B model...' &&
+          curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen2.5:7b\"}' &&
+          echo 'Model downloaded successfully.'"
 
   rag-mentor:
     build: .
