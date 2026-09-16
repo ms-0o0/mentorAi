@@ -139,9 +139,12 @@
 
 | 화면 구분 | 캡처 이미지 (Placeholder) | 주요 기능 설명 |
 | :---: | :--- | :--- |
-| **여러 모드 선택 창** | `![모드 선택 창](docs/screenshots/모드%20선택.png)` | 모드 선택 및 PDF 자료 업로드 창 |
-| **문서 요약** | `![요약](docs/screenshots/요약.png)` | 문서 전체 요약  |
-| **질문 답변** | `![질문 답변](docs/screenshots/질문.png)` | 학생의 질문에 따라 질문을 답을 함 |
+| **여러 모드 선택 창** | <img width="405" height="787" alt="image" src="https://github.com/user-attachments/assets/0383b43b-bf4e-4940-bfdc-ec377e755f53" />
+ | 모드 선택 및 PDF 자료 업로드 창 |
+| **문서 요약** | <img width="1275" height="610" alt="image" src="https://github.com/user-attachments/assets/a14fb5b2-ba87-4e54-9750-c8d475e49d4f" />
+ | 문서 전체 요약  |
+| **질문 답변** | <img width="1344" height="863" alt="image" src="https://github.com/user-attachments/assets/9c76a927-4def-4b30-9840-a3d67cff349d" />
+ | 학생의 질문에 따라 질문을 답을 함 |
 
 </details>
 
