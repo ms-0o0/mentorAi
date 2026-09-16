@@ -2,9 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-# from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
-# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.chat_models import ChatOllama
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
@@ -34,7 +32,7 @@ def format_docs(docs):
     for d in docs:
         cleaned = clean_text(d.page_content)
 
-        # 🔥 중복 제거 핵심
+        #  중복 제거 핵심
         key = cleaned[:150]
         if key in seen:
             continue
@@ -120,63 +118,7 @@ def create_rag_chain_internal(retriever, llm, role="student"):
     else:
         template = template_student  # 기본값
 
-    # # 1. 문서 로드
-    # loader = PyMuPDFLoader(pdf_path)
-    # docs = loader.load()
-
-    # # 2. 문서 분할 (개선)
-    # text_splitter = RecursiveCharacterTextSplitter(
-    #     chunk_size=700,
-    #     chunk_overlap=200,
-    #     separators=["\n\n", "\n", ".", " "]
-    # )
-    # split_docs = text_splitter.split_documents(docs)
-
-    # # 3. 벡터 저장 (캐싱 가능 구조)
-    # # embeddings = OpenAIEmbeddings()
-    # embeddings = HuggingFaceEmbeddings(
-    #     # model_name="sentence-transformers/all-MiniLM-L6-v2"
-    #     model_name="jhgan/ko-sroberta-multitask"
-    # )
-
-    # import hashlib
-    # safe_filename = hashlib.md5(pdf_path.encode('utf-8')).hexdigest()
-    # db_path = f"./temp/{safe_filename}.faiss"
-
-    # if os.path.exists(db_path):
-    #     vectorstore = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
-    # else:
-    #     vectorstore = FAISS.from_documents(split_docs, embeddings)
-    #     vectorstore.save_local(db_path)
-
-    # # 4. Retriever 개선
-    # retriever = vectorstore.as_retriever(
-    #     search_type="mmr",   # 다양성 고려 (중요)
-    #     search_kwargs={"k": 5}
-    # )
-
     prompt = ChatPromptTemplate.from_template(template)
-
-    # 6. LLM 개선
-    # 기존 코드 주석 처리 (나중에 유료 버전 쓸 때 주석을 해제하세요)
-    # llm = ChatOpenAI(
-    #     model_name="gpt-4o",
-    #     temperature=0.1   # 약간 창의성
-    # )
-
-    # 무료 버전 LLM (Google Gemini) 주석 처리
-    # llm = ChatGoogleGenerativeAI(
-    #     model="gemini-2.5-flash",   # 🔥 이걸로 변경
-    #     temperature=0.1
-    # )
-
-    # 로컬 모델 (Ollama) 사용
-
-    # def get_llm():
-    #     return ChatOllama(
-    #         model="qwen2.5",
-    #         temperature=0.1
-    #     )
 
     def rag_chain_with_context(question, context):
         response = (prompt | llm | StrOutputParser()).invoke({
@@ -195,7 +137,7 @@ def route(question, mode, retriever, rag_chain_with_context, quiz_chain, summary
         docs = retriever.invoke("핵심 개념 요약")
         context, _ = format_docs(docs)
 
-        # 2. 먼저 요약 (🔥 핵심)
+        # 2. 먼저 요약 (핵심)
         summary = summary_chain.invoke({"context": context})
 
         # 3. 요약 기반으로 문제 생성
@@ -422,12 +364,6 @@ def create_rag_chain(pdf_path, role="student"):
     else:
         vectorstore = FAISS.from_documents(split_docs, embeddings)
         vectorstore.save_local(db_path)
-
-    # 4. retriever
-    # retriever = vectorstore.as_retriever(
-    #     search_type="similarity",
-    #     search_kwargs={"k": 3}
-    # )
 
     retriever = vectorstore.as_retriever(
         search_type="mmr",
